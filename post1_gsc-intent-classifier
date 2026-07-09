@@ -1,0 +1,25 @@
+import pandas as pd
+from transformers import pipeline
+from tqdm.auto import tqdm
+
+df = pd.read_csv('v1_gsc.csv').dropna(subset=['query'])
+classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
+# Fitness Watch Intents
+labels = [
+    "Biometric Tracking", "Activity Specific", "Tech Specs", 
+    "Transactional", "Comparisons", "Troubleshooting"
+]
+intents = []
+
+for i, query in enumerate(tqdm(df['query'].tolist(), desc="Classifying")):
+    try: 
+        intents.append(classifier(query, labels)['labels'][0])
+    except: 
+        intents.append("Error")
+        
+    # Auto-save every 100 rows!
+    if (i + 1) % 100 == 0:
+        df.iloc[:i+1].assign(Intent=intents).to_csv('gsc_BACKUP.csv', index=False)
+
+df.assign(Intent=intents).to_csv('gsc_FINAL.csv', index=False)
